@@ -1,5 +1,5 @@
-# URL to OpenSSHUtils zip file (replace with actual URL if available)
-$zipUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v7.7.2.1p1/OpenSSHUtils.zip"
+# URL to OpenSSHUtils zip file
+$zipUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.5.0.0p1-Beta/OpenSSH-Win32.zip"
 $zipPath = "$env:TEMP\OpenSSHUtils.zip"
 $extractPath = "$env:ProgramFiles\OpenSSHUtils"
 
