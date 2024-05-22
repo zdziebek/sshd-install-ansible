@@ -125,6 +125,14 @@ if ($?) {
     Handle-Error "Failed to create firewall rule to open port 22."
 }
 
+# Set the default shell for OpenSSH to PowerShell
+try {
+    New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force
+    Write-Output "Default shell for OpenSSH set to PowerShell successfully."
+} catch {
+    Handle-Error "Failed to set default shell for OpenSSH to PowerShell."
+}
+
 # Restart SSH service to apply any changes
 Restart-Service sshd -ErrorAction Stop
 if ($?) {
