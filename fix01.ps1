@@ -10,7 +10,7 @@ Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
 Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
 # Import the OpenSSHUtils module
-Import-Module "$extractPath\OpenSSHUtils.psd1" -Force
+Import-Module "$extractPath\OpenSSH-Win32\OpenSSHUtils.psd1" -Force
 
 # Fix permissions on sshd_config
 Repair-SshdConfigPermission -FilePath C:\ProgramData\ssh\sshd_config
