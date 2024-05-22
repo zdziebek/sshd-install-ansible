@@ -3,7 +3,7 @@ function Update-Status {
         [int]$Step,
         [string]$Message
     )
-    Write-Host "[$Step/16] $Message"
+    Write-Host "[$Step/17] $Message"
 }
 
 $step = 1
@@ -51,6 +51,11 @@ $configPath = "C:\ProgramData\ssh\sshd_config"
 Add-Content $configPath "`nAllowGroups ssh"
 Add-Content $configPath "`nPubkeyAuthentication yes"
 Add-Content $configPath "`nPasswordAuthentication no"
+$step++
+
+# Enable debug logging in sshd_config
+Update-Status $step "Enabling debug logging in sshd_config..."
+Add-Content $configPath "`nLogLevel DEBUG3"
 $step++
 
 # Restart SSH service to apply configuration changes
