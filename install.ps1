@@ -3,10 +3,29 @@ function Update-Status {
         [int]$Step,
         [string]$Message
     )
-    Write-Host "[$Step/19] $Message"
+    Write-Host "[$Step/18] $Message"
+}
+
+function Generate-Password {
+    $length = 16
+    $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()-_=+"
+    -join ((65..90) + (97..122) + (48..57) | Get-Random -Count $length | ForEach-Object {[char]$_})
 }
 
 $step = 1
+
+# Install Chocolatey
+Update-Status $step "Installing Chocolatey..."
+Set-ExecutionPolicy Bypass -Scope Process -Force
+$env:ChocolateyInstall = "C:\ProgramData\Chocolatey"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+$step++
+
+# Install gsudo using Chocolatey
+Update-Status $step "Installing gsudo..."
+choco install gsudo -y
+$step++
 
 # Install OpenSSH Server
 Update-Status $step "Installing OpenSSH Server..."
@@ -27,9 +46,11 @@ Update-Status $step "Creating group 'ssh'..."
 New-LocalGroup -Name ssh
 $step++
 
-# Add user 'ansible'
-Update-Status $step "Converting password to secure string..."
-$UserPassword = ConvertTo-SecureString "P@ssw0rd" -AsPlainText -Force
+# Add user 'ansible' with a generated password
+Update-Status $step "Generating password for user 'ansible'..."
+$password = Generate-Password
+$password | Out-File -FilePath "C:\Users\ansible\password.txt"
+$UserPassword = ConvertTo-SecureString $password -AsPlainText -Force
 $step++
 
 Update-Status $step "Creating user 'ansible'..."
@@ -83,6 +104,11 @@ foreach ($key in $keys) {
 }
 $step++
 
+# Fix permissions on authorized_keys
+Update-Status $step "Fixing permissions on authorized_keys..."
+icacls $authorizedKeysPath /inheritance:r /grant:r ansible:(R) /grant:r "NT AUTHORITY\SYSTEM:(F)" /grant:r "BUILTIN\Administrators:(F)"
+$step++
+
 # Open SSH port 22 in the firewall
 Update-Status $step "Creating firewall rule to open port 22..."
 New-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -DisplayName "OpenSSH Server (TCP-In)" -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
@@ -109,14 +135,6 @@ Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
 
 # Extract the zip file
 Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-
-# Import the OpenSSHUtils module
-Import-Module "$extractPath\OpenSSH-Win32\OpenSSHUtils.psd1" -Force
-
-# Repair permissions on authorized_keys
-Update-Status $step "Repairing permissions on authorized_keys..."
-Repair-AuthorizedKeyPermission -FilePath C:\Users\ansible\.ssh\authorized_keys
-$step++
 
 # Final restart of SSH service to apply any changes
 Update-Status $step "Final restart of OpenSSH service..."
