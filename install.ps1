@@ -125,4 +125,4 @@ Update-Status $step "Final restart of OpenSSH service..."
 Restart-Service sshd
 $step++
 
-Write-Output "Setup complete."
+Write-Output "Setup complete." 
