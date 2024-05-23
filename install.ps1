@@ -3,13 +3,7 @@ function Update-Status {
         [int]$Step,
         [string]$Message
     )
-    Write-Host "[$Step/18] $Message"
-}
-
-function Generate-Password {
-    $length = 16
-    $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()-_=+"
-    -join ((65..90) + (97..122) + (48..57) | Get-Random -Count $length | ForEach-Object {[char]$_})
+    Write-Host "[$Step/17] $Message"
 }
 
 $step = 1
@@ -33,16 +27,9 @@ Update-Status $step "Creating group 'ssh'..."
 New-LocalGroup -Name ssh
 $step++
 
-# Add user 'ansible' with a generated password
-Update-Status $step "Generating password for user 'ansible'..."
-$password = Generate-Password
-$passwordPath = "C:\Users\ansible\password.txt"
-$password | Out-File -FilePath $passwordPath
-$UserPassword = ConvertTo-SecureString $password -AsPlainText -Force
-$step++
-
+# Add user 'ansible' without a password
 Update-Status $step "Creating user 'ansible'..."
-New-LocalUser -Name "ansible" -Password $UserPassword -PasswordNeverExpires -UserMayNotChangePassword
+New-LocalUser -Name "ansible" -Password (ConvertTo-SecureString "zaq1@WSX" -AsPlainText -Force) -PasswordNeverExpires -UserMayNotChangePassword
 $step++
 
 Update-Status $step "Adding user 'ansible' to group 'ssh'..."
