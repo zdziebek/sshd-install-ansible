@@ -3,7 +3,7 @@ function Update-Status {
         [int]$Step,
         [string]$Message
     )
-    Write-Host "[$Step/18] $Message"
+    Write-Host "[$Step/17] $Message"
 }
 
 function Generate-Password {
@@ -13,19 +13,6 @@ function Generate-Password {
 }
 
 $step = 1
-
-# Install Chocolatey
-Update-Status $step "Installing Chocolatey..."
-Set-ExecutionPolicy Bypass -Scope Process -Force
-$env:ChocolateyInstall = "C:\ProgramData\Chocolatey"
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-$step++
-
-# Install gsudo using Chocolatey
-Update-Status $step "Installing gsudo..."
-choco install gsudo -y
-$step++
 
 # Install OpenSSH Server
 Update-Status $step "Installing OpenSSH Server..."
@@ -61,9 +48,9 @@ Update-Status $step "Adding user 'ansible' to group 'ssh'..."
 Add-LocalGroupMember -Group "ssh" -Member "ansible"
 $step++
 
-# Add 'ssh' group to local administrators
-Update-Status $step "Adding group 'ssh' to local administrators..."
-Add-LocalGroupMember -Group "Administrators" -Member "ssh"
+# Add user 'ansible' to local administrators
+Update-Status $step "Adding user 'ansible' to local administrators..."
+Add-LocalGroupMember -Group "Administrators" -Member "ansible"
 $step++
 
 # Download and apply OpenSSH configuration
@@ -135,6 +122,14 @@ Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
 
 # Extract the zip file
 Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+
+# Import the OpenSSHUtils module
+Import-Module "$extractPath\OpenSSH-Win32\OpenSSHUtils.psd1" -Force
+
+# Repair permissions on authorized_keys
+Update-Status $step "Repairing permissions on authorized_keys..."
+Repair-AuthorizedKeyPermission -FilePath C:\Users\ansible\.ssh\authorized_keys
+$step++
 
 # Final restart of SSH service to apply any changes
 Update-Status $step "Final restart of OpenSSH service..."
