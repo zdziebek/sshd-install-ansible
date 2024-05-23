@@ -3,7 +3,7 @@ function Update-Status {
         [int]$Step,
         [string]$Message
     )
-    Write-Host "[$Step/17] $Message"
+    Write-Host "[$Step/18] $Message"
 }
 
 function Generate-Password {
@@ -36,7 +36,8 @@ $step++
 # Add user 'ansible' with a generated password
 Update-Status $step "Generating password for user 'ansible'..."
 $password = Generate-Password
-$password | Out-File -FilePath "C:\Users\ansible\password.txt"
+$passwordPath = "C:\Users\ansible\password.txt"
+$password | Out-File -FilePath $passwordPath
 $UserPassword = ConvertTo-SecureString $password -AsPlainText -Force
 $step++
 
@@ -91,9 +92,10 @@ foreach ($key in $keys) {
 }
 $step++
 
-# Fix permissions on authorized_keys
-Update-Status $step "Fixing permissions on authorized_keys..."
-icacls $authorizedKeysPath /inheritance:r /grant:r ansible:(R) /grant:r "NT AUTHORITY\SYSTEM:(F)" /grant:r "BUILTIN\Administrators:(F)"
+# Fix permissions on authorized_keys using icacls from CMD
+Update-Status $step "Fixing permissions on authorized_keys using icacls from CMD..."
+$icaclsCommand = "icacls `"$authorizedKeysPath`" /inheritance:r /grant:r ansible:(R) /grant:r `"NT AUTHORITY\SYSTEM`":(F) /grant:r `"BUILTIN\Administrators`":(F)"
+cmd.exe /c $icaclsCommand
 $step++
 
 # Open SSH port 22 in the firewall
