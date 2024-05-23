@@ -12,19 +12,3 @@ Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 # Import the OpenSSHUtils module
 Import-Module "$extractPath\OpenSSH-Win32\OpenSSHUtils.psd1" -Force
 
-# Fix permissions on sshd_config
-Repair-SshdConfigPermission -FilePath C:\ProgramData\ssh\sshd_config
-
-# Fix permissions on a specified host key
-Repair-SshdHostKeyPermission -FilePath C:\ProgramData\ssh\ssh_host_ecdsa_key
-
-# Fix permissions on a specified authorized_key
-Repair-AuthorizedKeyPermission -FilePath C:\Users\ansible\.ssh\authorized_keys
-
-# Fix permissions on a specific ssh_config
-Repair-UserSshConfigPermission -FilePath C:\Users\ansible\.ssh\config
-
-# Fix permissions on a user key
-Repair-UserKeyPermission -FilePath C:\Users\ansible\.ssh\id_rsa
-
-Write-Output "Permissions repair complete."
