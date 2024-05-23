@@ -3,7 +3,7 @@ function Update-Status {
         [int]$Step,
         [string]$Message
     )
-    Write-Host "[$Step/17] $Message"
+    Write-Host "[$Step/19] $Message"
 }
 
 $step = 1
@@ -45,17 +45,11 @@ Update-Status $step "Adding group 'ssh' to local administrators..."
 Add-LocalGroupMember -Group "Administrators" -Member "ssh"
 $step++
 
-# Update OpenSSH configuration
-Update-Status $step "Updating OpenSSH configuration..."
+# Download and apply OpenSSH configuration
+Update-Status $step "Downloading and applying OpenSSH configuration..."
+$configUrl = "https://raw.githubusercontent.com/zdziebek/sshd-install-ansible/main/sshd.config"
 $configPath = "C:\ProgramData\ssh\sshd_config"
-Add-Content $configPath "`nAllowGroups ssh"
-Add-Content $configPath "`nPubkeyAuthentication yes"
-Add-Content $configPath "`nPasswordAuthentication no"
-$step++
-
-# Enable debug logging in sshd_config
-Update-Status $step "Enabling debug logging in sshd_config..."
-Add-Content $configPath "`nLogLevel DEBUG3"
+Invoke-WebRequest -Uri $configUrl -OutFile $configPath
 $step++
 
 # Restart SSH service to apply configuration changes
@@ -63,18 +57,30 @@ Update-Status $step "Restarting OpenSSH service..."
 Restart-Service sshd
 $step++
 
-# Generate SSH key for 'ansible'
-Update-Status $step "Generating SSH key for 'ansible'..."
+# Ensure the .ssh directory exists
+Update-Status $step "Ensuring .ssh directory exists..."
 $sshFolderPath = "C:\Users\ansible\.ssh"
 New-Item -ItemType Directory -Force -Path $sshFolderPath
-ssh-keygen -t rsa -b 2048 -f "$sshFolderPath\id_rsa" -N ""
 $step++
 
-# Add the provided SSH public key to 'authorized_keys'
-Update-Status $step "Adding SSH public key to 'authorized_keys'..."
-$publicKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCe8U1Nu5wkiQ1i5SyCr3Fdb9Bzfyh9/Agg4sKfO9zqlspH6bmw1Y3RmiQf+aL7iv+Nj7P2ScSouRwgwO08W5YPryLSrWjTFuILHO9b1rMwraVgshYzkj3PHS4ChzA3wXAWra0aSnnjPfEBdxLmF8JazPMMQ0Dsnw7Qzytk426mnizOFNgbjYmJpox8UTEbI1Qt9YbBuEGKHWQW+2yYzZ9j9zxGSMnC0h5y7prJqyOmksZwrODxLx0yMcOYOv+dQkLNKW+igvSiFiD4UDFWvIb5llE4TSGLzS4f9NYYlLRXBdibWdUBmnojqR+MbTnlIqfaIJer8YeaCskjTSFAI3tVgFtEjQuQ3Qq0rcV/1PA1FW845JHtqPSuDSMAXTkmBLlklNk3dpPaUBr6CRdYbepSsN/+/+BNKZvRZkVC6ycJ+LdSfutXF130TYFYavc/L2DG6itJCmwlOHZDqd3/HxgLJ7ZBFLvPFdisyWHuP69sJgtpvihBvPyvFXMPcUTjU00= mzdziebko@DESKTOP-3HHGGK7"
+# Add new SSH public keys to authorized_keys
+Update-Status $step "Adding new SSH keys to authorized_keys..."
 $authorizedKeysPath = "$sshFolderPath\authorized_keys"
-Add-Content $authorizedKeysPath $publicKey
+if (-Not (Test-Path $authorizedKeysPath)) {
+    New-Item -ItemType File -Path $authorizedKeysPath
+}
+
+$keys = @(
+    "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDfn1OEzj6GpYBxfqtJyb3UXVb4hiYmk1bSQlzX9XPY9lGkvGokstqOVWFFmFJB47TQOjB4y4ogXW17dGIbVmbzDzAz0A+Ntb+dsGiCBHNPvr5/LNTENL5kjgphWe+0BsAfBiGxRHAtKoCw83ztU2KNJEkf6ibjeiflcgzlvCUpkS/FWlTCgSn9s/igg7ueJ4+jm7UdSW99vAxBcoMoAcOzBJvQoW5VAF4kGS1b4UL3cNajLyY3sj3tcl5fjdxu4coFPnGPURdBfDDIeFL2wxy5Zghwf+npp48GlP4k/i2jnQEM0SSeCyoN42AnS6LIGVhffuFuQSNpI46dqGX+Mu25 imported-openssh-key",
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO97VaxpbR4pp3eU/55Ue99Eo0nfMe8l0yK+S5KZFQ2a zdz@DESKTOP-CUOOK6S",
+    "ssh-dss AAAAB3NzaC1kc3MAAACBAJZqDjjCeEMk9uwiK+9h2fRzGbDFzEJ8AG6P0zrsHp2HZkMnYsMDEoZOkRj8gCdCBet9hn69p7fDW5f4txaGDF+ZBvr8BbNXsMmYbgjljdkdxuAH+6iI2yVOOahsCtOrJG9+xrI6Cc5HU6/VtjkBZizWyUxbQbL3A4WJiY5RPKlrAAAAFQCqMNsSSEg6oElSFx4peIFFAMvsbwAAAIEAgT1QuPLT22Fz91OZw50hEOkKtJlXKCysZp0qeouojvyXxYWbWMk5kfkz6rul+jljN4ORnGrx79U5UqV8z+3G8IxLFh6121bl/rkKZBYiAF/4mA8Kn44vCxTgYlZMoGA8vcVahdL/Na28KfTotEa+FsRWxKysekSTFCSD0CRZs18AAACAbYFJEmIk6SCxBeVJHHIa5cnIYUDUzgbN7Z8SKIem/doPuQBLYJTf8uWHaM11MAUaDc1eVMp4r+ugBaZdXc7DopbVz/w9oy2ZuK2YVAG1R2Odqd9XWOly1FbXczusQuImukJZmmN9AObTiRbgc7ZfzLE9fk8wNtpTkd+KKscddJg= zdz@DESKTOP-CUOOK6S",
+    "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDfn1OEzj6GpYBxfqtJyb3UXVb4hiYmk1bSQlzX9XPY9lGkvGokstqOVWFFmFJB47TQOjB4y4ogXW17dGIbVmbzDzAz0A+Ntb+dsGiCBHNPvr5/LNTENL5kjgphWe+0BsAfBiGxRHAtKoCw83ztU2KNJEkf6ibjeiflcgzlvCUpkS/FWlTCgSn9s/igg7ueJ4+jm7UdSW99vAxBcoMoAcOzBJvQoW5VAF4kGS1b4UL3cNajLyY3sj3tcl5fjdxu4coFPnGPURdBfDDIeFL2wxy5Zghwf+npp48GlP4k/i2jnQEM0SSeCyoN42AnS6LIGVhffuFuQSNpI46dqGX+Mu25 mzdziebko",
+    "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCe8U1Nu5wkiQ1i5SyCr3Fdb9Bzfyh9/Agg4sKfO9zqlspH6bmw1Y3RmiQf+aL7iv+Nj7P2ScSouRwgwO08W5YPryLSrWjTFuILHO9b1rMwraVgshYzkj3PHS4ChzA3wXAWra0aSnnjPfEBdxLmF8JazPMMQ0Dsnw7Qzytk426mnizOFNgbjYmJpox8UTEbI1Qt9YbBuEGKHWQW+2yYzZ9j9zxGSMnC0h5y7prJqyOmksZwrODxLx0yMcOYOv+dQkLNKW+igvSiFiD4UDFWvIb5llE4TSGLzS4f9NYYlLRXBdibWdUBmnojqR+MbTnlIqfaIJer8YeaCskjTSFAI3tVgFtEjQuQ3Qq0rcV/1PA1FW845JHtqPSuDSMAXTkmBLlklNk3dpPaUBr6CRdYbepSsN/+/+BNKZvRZkVC6ycJ+LdSfutXF130TYFYavc/L2DG6itJCmwlOHZDqd3/HxgLJ7ZBFLvPFdisyWHuP69sJgtpvihBvPyvFXMPcUTjU00= mzdziebko@DESKTOP-3HHGGK7"
+)
+
+foreach ($key in $keys) {
+    Add-Content $authorizedKeysPath $key
+}
 $step++
 
 # Open SSH port 22 in the firewall
@@ -89,6 +95,31 @@ $step++
 
 # Restart SSH service to apply any changes
 Update-Status $step "Restarting OpenSSH service..."
+Restart-Service sshd
+$step++
+
+# URL to OpenSSHUtils zip file
+Update-Status $step "Downloading and extracting OpenSSHUtils..."
+$zipUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.5.0.0p1-Beta/OpenSSH-Win32.zip"
+$zipPath = "$env:TEMP\OpenSSHUtils.zip"
+$extractPath = "$env:ProgramFiles\OpenSSHUtils"
+
+# Download the OpenSSHUtils zip file
+Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
+
+# Extract the zip file
+Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+
+# Import the OpenSSHUtils module
+Import-Module "$extractPath\OpenSSH-Win32\OpenSSHUtils.psd1" -Force
+
+# Repair permissions on authorized_keys
+Update-Status $step "Repairing permissions on authorized_keys..."
+Repair-AuthorizedKeyPermission -FilePath C:\Users\ansible\.ssh\authorized_keys
+$step++
+
+# Final restart of SSH service to apply any changes
+Update-Status $step "Final restart of OpenSSH service..."
 Restart-Service sshd
 $step++
 
